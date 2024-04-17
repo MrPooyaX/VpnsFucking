@@ -18,17 +18,34 @@ function httpGet($url)
 function convertVlessJsonToUrl($vlessJson)
 {
     $data = json_decode($vlessJson, true);
-
-    $uuid = $data['outbounds'][0]['settings']['vnext'][0]['users'][0]['id'];
+	$uuid = $data['outbounds'][0]['settings']['vnext'][0]['users'][0]['id'];
     $address = $data['outbounds'][0]['settings']['vnext'][0]['address'];
     $port = $data['outbounds'][0]['settings']['vnext'][0]['port'];
     $security = $data['outbounds'][0]['streamSettings']['security'];
     $tlsSni = $data['outbounds'][0]['streamSettings']['tlsSettings']['serverName'];
+    //$alpn = $data['outbounds'][0]['streamSettings']['tlsSettings']['alpn'];
+    $alpn = 'h2%2Chttp%2F1.1';
+    $fingerprint = $data['outbounds'][0]['streamSettings']['tlsSettings']['fingerprint'];
     $type = $data['outbounds'][0]['streamSettings']['network'];
-    $host = $data['outbounds'][0]['streamSettings']['wsSettings']['headers']['Host'];
-    $path = $data['outbounds'][0]['streamSettings']['wsSettings']['path'];
-
-    $url = "vless://{$uuid}@{$address}:{$port}?encryption=none&security={$security}&sni={$tlsSni}&type={$type}&host={$host}&path={$path}#new server";
+    if($data['outbounds'][0]['streamSettings']['network'] == "grpc")
+    {
+        $serviceName = $data['outbounds'][0]['streamSettings']['grpcSettings']['serviceName'];
+        $multiMode = $data['outbounds'][0]['streamSettings']['grpcSettings']['multiMode'];
+        if ($multiMode == false)
+        {
+            $mode = "gun";
+        }else
+        {
+            $mode = "multi";
+        }
+        $url = "vless://{$uuid}@{$address}:{$port}?encryption=none&security={$security}&sni={$tlsSni}&type={$type}&serviceName={$serviceName}&mode={$mode}&alpn={$alpn}&fp={$fingerprint}#new server";
+    }else
+    {
+        $host = $data['outbounds'][0]['streamSettings']['wsSettings']['headers']['Host'];
+        $path = $data['outbounds'][0]['streamSettings']['wsSettings']['path'];
+        
+        $url = "vless://{$uuid}@{$address}:{$port}?encryption=none&security={$security}&sni={$tlsSni}&type={$type}&host={$host}&path={$path}&alpn={$alpn}&fp={$fingerprint}#new server";
+    }
 
     return $url;
 }
@@ -47,9 +64,13 @@ function generateRandomAndroidDeviceId() {
 
     return $deviceId;
 }
+$list = ["Xiaomi:POCO X3:29","Xiaomi:POCO X3:29","Xiaomi:Redmi 8:29","Xiaomi:Redmi 9:29","Samsung:Samsung Galaxy A10:28","Samsung:Samsung Galaxy A30:28","Samsung:Samsung Galaxy S21:30","Samsung:Samsung Galaxy S21 Ultra:30"];
+$device = explode(':',$list[array_rand($list, 1)]);
+$brand = $device[0];
+$model = urlencode($device[1]);
+$api = $device[2];
 
-
-$res = httpGet("https://mci-api.googleadservices.info/app-configuration?deviceId=".generateRandomAndroidDeviceId()."&deviceBrand=OnePlus&deviceModel=ONEPLUS%20A5000&deviceOs=28");
+$res = httpGet("https://mci-api.googleadservices.info/app-configuration?deviceId=".generateRandomAndroidDeviceId()."&deviceBrand=$brand&deviceModel=$model&deviceOs=$api");
 
 $ex = explode(':',$res);
 $iv = $ex[0];
@@ -65,13 +86,18 @@ for ($i = 0; $i < count($jsonlist);$i++)
 {
     $vpn = $jsonlist[$i]["configuration"];
     
-    
-    if (isset($_GET["convert"]) && $_GET["convert"] == TRUE){ 
-        $configs .= convertVlessJsonToUrl($vpn) . "\n";
-    }else
+    if (is_object(json_decode($vpn))) 
     {
-        $configs .= str_replace(" ","",str_replace("\r\n","",$vpn)) . "\n";
-    }
+		if (isset($_GET["convert"]) && $_GET["convert"] == TRUE){ 
+			$configs .= convertVlessJsonToUrl($vpn) . "\n";
+		}else
+		{
+			$configs .= str_replace(" ","",str_replace("\r\n","",$vpn)) . "\n";
+		}
+	}else
+	{
+		$configs .= str_replace(" ","",str_replace("\r\n","",$vpn)) . "\n";
+	}
 }
 
 
