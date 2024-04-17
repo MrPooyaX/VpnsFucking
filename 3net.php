@@ -5,16 +5,11 @@ function httpGet($url)
     $ch = curl_init($url);
     curl_setopt($ch,CURLOPT_RETURNTRANSFER,true);
     $headers = array();
-
-    //$headers[] = "Accept-Encoding: gzip";
     $headers[] = "User-Agent: okhttp/3.14.9";
     $headers[] = "Connection: Keep-Alive";
     curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-
-
+	curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
     curl_setopt($ch,CURLOPT_HEADER, 0);
-    //curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-   // curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
     $output=curl_exec($ch);
     curl_close($ch);
     return $output;
