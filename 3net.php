@@ -49,10 +49,14 @@ function convertVlessJsonToUrl($vlessJson)
 
     return $url;
 }
-function decryptAES($sValue, $sSecretKey,$IV) {
-    $sValue = hex2bin($sValue);
+function decryptAES($data, $sSecretKey) {
+	$ex = explode(':',$data);
+	$iv = hex2bin($ex[0]);
+	$data = $ex[1];
+
+    $data = hex2bin($data);
     $method = "AES-256-CTR";
-    return  openssl_decrypt($sValue, $method, $sSecretKey, OPENSSL_RAW_DATA, $IV);
+    return  openssl_decrypt($data, $method, $sSecretKey, OPENSSL_RAW_DATA, $iv);
 }
 function generateRandomAndroidDeviceId() {
     $characters = '0123456789abcdef';
@@ -64,20 +68,23 @@ function generateRandomAndroidDeviceId() {
 
     return $deviceId;
 }
-$list = ["Xiaomi:POCO X3:29","Xiaomi:POCO X3:29","Xiaomi:Redmi 8:29","Xiaomi:Redmi 9:29","Samsung:Samsung Galaxy A10:28","Samsung:Samsung Galaxy A30:28","Samsung:Samsung Galaxy S21:30","Samsung:Samsung Galaxy S21 Ultra:30"];
+$res = httpGet("https://gist.github.com/TonDevv/9d4313f10b2906d9c98190d0fa3cefa4/raw");
+$data = decryptAES($res,"D9mG1BEqGdHSwdvly3q7ol9qp2OB8pC2");
+$address = json_decode($data,true)["iran-wifi"];
+
+$list = ["Xiaomi:POCO%20AX3:29","Xiaomi:POCO%20AX3:29","Xiaomi:Redmi%20A8:29","Xiaomi:Redmi%20A9:29","Samsung:Samsung%20AGalaxy%20AA10:28","Samsung:Samsung%20AGalaxy%20AA30:28","Samsung:Samsung%20AGalaxy%20AS21:30","Samsung:Samsung%20AGalaxy%20AS21%20AUltra:30"];
 $device = explode(':',$list[array_rand($list, 1)]);
 $brand = $device[0];
 $model = urlencode($device[1]);
 $api = $device[2];
 
-$res = httpGet("https://mci-api.googleadservices.info/app-configuration?deviceId=".generateRandomAndroidDeviceId()."&deviceBrand=$brand&deviceModel=$model&deviceOs=$api");
 
-$ex = explode(':',$res);
-$iv = $ex[0];
 
-$data = $ex[1];
+$res = httpGet($address."/app-configuration?deviceId=".generateRandomAndroidDeviceId()."&deviceBrand=$brand&deviceModel=$model&deviceOs=$api");
 
-$data = decryptAES($data,"D9mG1BEqGdHSwdvly3q7ol9qp2OB8pC2",hex2bin($iv));
+
+
+$data = decryptAES($res,"D9mG1BEqGdHSwdvly3q7ol9qp2OB8pC2");
 
 $jsonlist = json_decode($data,true)["servers"];
 
